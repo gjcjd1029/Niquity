@@ -18,12 +18,12 @@ contract BorrowerOperation {
         uint256 gasCompensation;
     }
 
-    mapping(address user => UserDetail info) public userInfo;
-    mapping(uint256 index => address user) public indexToUser;
     StabilityPool public stabilityPool;
     ChainLinkOracle public oracle;
     NUSD public nusd;
-    
+
+    mapping(address user => UserDetail info) public userInfo;
+    mapping(uint256 index => address user) public indexToUser;
     uint256 constant public WAD = 1e18;
     uint256 constant public CCR = 150 * WAD;
     uint256 constant public MCR = 110 * WAD;
@@ -32,7 +32,6 @@ contract BorrowerOperation {
     uint256 public totalCol;
     uint256 public totalDebt;
     uint256 public feeRate;
-
     address public owner;
 
     event swapIndex(address user, uint256 prevIndex, uint256 nextIndex);
@@ -104,9 +103,7 @@ contract BorrowerOperation {
     // 담보 제거
     function withdrawCollateral(address user, uint256 colAmount) external {
         _checkUser(user);
-
         userInfo[user].col -= colAmount;
-
         _checkMCR(userInfo[user].col, userInfo[user].debt);
         _checkUpdateNICR(colAmount, 0, false, true);
 
@@ -118,12 +115,10 @@ contract BorrowerOperation {
     // 추가 부채
     function addDebt(address user, uint256 lendAmount) external {
         _checkUser(user);
-        
         uint256 fee = lendAmount * feeRate / WAD;
         uint256 liquidationFee = lendAmount * feeRate / WAD;
         userInfo[user].debt += lendAmount;
         userInfo[user].gasCompensation += liquidationFee;
-        
         _checkMCR(userInfo[user].col, userInfo[user].debt);
         _checkUpdateNICR(0, lendAmount, true, true);
 
@@ -141,8 +136,6 @@ contract BorrowerOperation {
     // 부채를 갚는 함수
     function repayNUSD(address user, uint256 repayAmount) external {
         _checkUser(user);
-        
-        // amount의 1달러 decimals는 1e8이지만, 체인링크 오라클에서 가져오는것도 1e8 업스케일링 되어있는 상태
         uint256 dollarToEth = viewNusdToEth(repayAmount);
         _checkNonZero(user, dollarToEth);
 
@@ -166,14 +159,10 @@ contract BorrowerOperation {
         userInfo[indexToUser[prevIndex]].index = nextIndex;
         indexToUser[nextIndex] = indexToUser[prevIndex];
         indexToUser[prevIndex] = address(0);
-
         uint256 col = userInfo[user].col;
-
         _initUserDetail(user);
         indexCount--;
-
         totalCol -= col;
-        
         payable(user).call{value: col}("");
 
         // emit으로 마지막 index로 들어간 trove의 index번호가 바뀌었음 알려줌.

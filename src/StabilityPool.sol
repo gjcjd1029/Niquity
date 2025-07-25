@@ -13,17 +13,18 @@ contract StabilityPool {
         uint256 userLastProfitPerUnit;
         uint256 index;
     }
+    
     BorrowerOperation public borrowerOperation;
     ChainLinkOracle public oracle;
     NUSD public nusd;
 
-    uint256 constant public WAD = 1e18;
-    address public owner;
     mapping(address => stakedUserInfo) public users;
     mapping(uint256 => address) public indexToUser;
+    uint256 constant public WAD = 1e18;
     uint256 public totalDeposits;
     uint256 public profitPerUnit;
     uint256 public indexCount;
+    address public owner;
 
     modifier onlyOwner() {
         _checkOwner();
@@ -48,7 +49,6 @@ contract StabilityPool {
         require(amount > 0, "Amount must be greater than zero");
 
         _claimPendingProfit(msg.sender);
-
         if(users[msg.sender].deposits == 0) {
             indexToUser[indexCount] = msg.sender;
             users[msg.sender].index = indexCount;
@@ -64,11 +64,9 @@ contract StabilityPool {
         require(user == msg.sender);
 
         _claimPendingProfit(user);
-
         users[user].deposits -= nusdAmount;
         totalDeposits -= nusdAmount;
         nusd.mint(user, nusdAmount);
-
         if(users[user].deposits == 0) {
             users[indexToUser[indexCount - 1]].index = users[user].index;
             indexToUser[users[user].index] = indexToUser[indexCount - 1];
@@ -94,6 +92,7 @@ contract StabilityPool {
     // 실제 Liquity에서는 청산 트랜잭션의 일부로 이 로직이 작동, 청산 금액, nicr
     function distributeProfit(uint256 profitAmount) public payable {
         require(totalDeposits > 0, "No deposits to distribute profit to");
+
         profitPerUnit += (profitAmount) / totalDeposits;
     }
 
@@ -103,7 +102,6 @@ contract StabilityPool {
         for(uint256 i = 0; i < indexCount; i++) {
             address target = indexToUser[i];
             uint256 balance = users[target].deposits * nusdAmount / totalDeposits ;
-
             if(users[target].deposits < balance * WAD * 100 / nicr) {
                 continue;
             } else {
