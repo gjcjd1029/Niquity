@@ -72,7 +72,6 @@ contract StabilityPool {
             indexToUser[users[user].index] = indexToUser[indexCount - 1];
             indexToUser[indexCount - 1] = address(0);
             indexCount--;
-            users[msg.sender].userLastProfitPerUnit = 0;
         }
     }
 
@@ -85,7 +84,7 @@ contract StabilityPool {
         if (pendingNUSDProfit > 0) {
             nusd.mint(user, pendingNUSDProfit);
         }
-        users[msg.sender].userLastProfitPerUnit = profitPerUnit;
+        users[user].userLastProfitPerUnit = profitPerUnit;
         return pendingNUSDProfit;
     }
 
